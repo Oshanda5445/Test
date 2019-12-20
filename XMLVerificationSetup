@@ -1,0 +1,142 @@
+package se.cambio.qa.ca.data;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+import se.cambio.test.taf.core.base.BaseTest;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import static java.lang.String.valueOf;
+
+public class XMLVerificationSetup extends BaseTest {
+
+    static String path_TempFaktura = "\\\\CSLK-1354-SD\\Temp\\TempFaktura";
+    static String path_TempRedovisning = "\\\\CSLK-1354-SD\\Temp\\TempRedovisning";
+    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+    static Date date = new Date();
+    static String currentDate = formatter.format(date);
+
+    public static void main(String argv[]) {
+
+//        moveFiles("\\\\CSLK-1354-SD\\Temp\\Temp_xml_files\\");
+        xmlVerification("PF","//CareProviders/CareProvider");
+
+    }
+
+    /**
+     * Move previous SKF , PF and SV files to TempFaktura folder
+     * Move previous KA to TempRedovisning folder
+     *
+     * @param destination - Server folder path
+     */
+    public static void moveFiles(String destination) {
+
+        File TempFaktura_folder = new File(path_TempFaktura);
+        File TempRedovisning = new File(path_TempRedovisning);
+
+        File[] listOfFiles_TempFaktura = TempFaktura_folder.listFiles();
+        File[] listOfFiles_TempRedovisning = TempRedovisning.listFiles();
+        Path result = null;
+
+        for (int i = 0; i < listOfFiles_TempFaktura.length; i++) {
+            try {
+                result = Files.move(Paths.get(valueOf(listOfFiles_TempFaktura[i])), Paths.get(destination + listOfFiles_TempFaktura[i].getName()));
+            } catch (IOException e) {
+                System.out.println("Exception while moving file: " + e.getMessage());
+            }
+        }
+        if (result != null) {
+            System.out.println("File moved from TempFaktura successfully.");
+        } else {
+            System.out.println("File movement from TempFaktura failed. No files available to move");
+        }
+
+        result = null;
+
+        for (int i = 0; i < listOfFiles_TempRedovisning.length; i++) {
+            try {
+                result = Files.move(Paths.get(valueOf(listOfFiles_TempRedovisning[i])), Paths.get(destination + listOfFiles_TempRedovisning[i].getName()));
+            } catch (IOException e) {
+                System.out.println("Exception while moving file: " + e.getMessage());
+            }
+        }
+        if (result != null) {
+            System.out.println("File moved from TempRedovisning successfully.");
+        } else {
+            System.out.println("File movement from TempRedovisning failed. No files available to move");
+        }
+
+    }
+
+    public static void xmlVerification(String fileType, String xPath) {
+
+        File TempFaktura_folder = new File(path_TempFaktura);
+        File TempRedovisning = new File(path_TempRedovisning);
+
+        File[] listOfFiles_TempFaktura = TempFaktura_folder.listFiles();
+        File[] listOfFiles_TempRedovisning = TempRedovisning.listFiles();
+
+
+        for (int i = 0; i < listOfFiles_TempFaktura.length; i++) {
+
+            if (listOfFiles_TempFaktura[i].getName().startsWith(fileType + "_" + currentDate)) {
+
+                try {
+                    //creating a constructor of file class and parsing an XML file
+                    File file = new File("\\\\CSLK-1354-SD\\Temp\\TempFaktura\\" + listOfFiles_TempFaktura[i].getName());
+
+                    //an instance of factory that gives a document builder
+                    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+
+                    //an instance of builder to parse the specified xml file
+                    DocumentBuilder db = dbf.newDocumentBuilder();
+                    Document doc = db.parse(file);
+
+                    doc.getDocumentElement().normalize();
+                    // Create XPath
+
+                    XPath xpath = XPathFactory.newInstance().newXPath();
+
+                    String expression = xPath;
+
+                    NodeList nodeList = (NodeList) xpath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+
+                    for (int a = 0; a < nodeList.getLength(); a++) {
+                        Node nNode = nodeList.item(a);
+                        System.out.println("\nCurrent Element :" + nNode.getNodeName());
+
+                        if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+                            Element eElement = (Element) nNode;
+                            System.out.println("CareProviderID : " + eElement.getElementsByTagName("CareProviderID").item(0).getTextContent());
+                        }
+                    }
+                } catch (ParserConfigurationException e) {
+                    e.printStackTrace();
+                } catch (SAXException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (XPathExpressionException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+
